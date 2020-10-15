@@ -25,6 +25,7 @@ module Blacklight
     def initialize(document: nil, presenter: nil,
                    id: nil, classes: [], component: :article, title_component: :h4,
                    metadata_component: Blacklight::DocumentMetadataComponent,
+                   embed_component: nil,
                    counter: nil, document_counter: nil, counter_offset: 0,
                    show: false)
       if presenter.nil? && document.nil?
@@ -39,6 +40,7 @@ module Blacklight
       @id = id || ('document' if show)
       @classes = classes
 
+      @embed_component = embed_component
       @metadata_component = metadata_component
 
       @counter = counter
@@ -99,6 +101,14 @@ module Blacklight
       return super if block_given?
 
       @before_title || counter
+    end
+
+    def embed
+      component = @embed_component || presenter.view_config.embed_component
+
+      return unless component
+
+      @view_context.render(component.new(document: document, presenter: presenter, document_counter: document_counter))
     end
 
     private
