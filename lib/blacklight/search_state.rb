@@ -78,15 +78,23 @@ module Blacklight
     deprecation_deprecate :[]
 
     def has_constraints?
-      !(query_param.blank? && filter_params.blank?)
+      !(query_param.blank? && filter_params.blank? && clause_params.blank?)
     end
 
     def query_param
       params[:q]
     end
 
+    def clause_params
+      params[:clause] || {}
+    end
+
     def filter_params
       params[:f] || {}
+    end
+
+    def inclusive_filter_params
+      params[:f_inclusive] || {}
     end
 
     def reset(params = nil)
@@ -157,7 +165,7 @@ module Blacklight
     # removes additional params (page, id, etc..)
     # @param [String] field
     # @param [String] item
-    def remove_facet_params(field, item)
+    def remove_facet_params(field, item, param = :f)
       if item.respond_to? :field
         field = item.field
       end
@@ -172,19 +180,19 @@ module Blacklight
       # need to dup the facet values too,
       # if the values aren't dup'd, then the values
       # from the session will get remove in the show view...
-      p[:f] = (p[:f] || {}).dup
-      p[:f][url_field] = (p[:f][url_field] || []).dup
+      p[param] = (p[param] || {}).dup
+      p[param][url_field] = (p[param][url_field] || []).dup
 
-      collection = p[:f][url_field]
+      collection = p[param][url_field]
       # collection should be an array, because we link to ?f[key][]=value,
       # however, Facebook (and maybe some other PHP tools) tranform that parameters
       # into ?f[key][0]=value, which Rails interprets as a Hash.
       if collection.is_a? Hash
         collection = collection.values
       end
-      p[:f][url_field] = collection - [value]
-      p[:f].delete(url_field) if p[:f][url_field].empty?
-      p.delete(:f) if p[:f].empty?
+      p[param][url_field] = collection - [value]
+      p[param].delete(url_field) if p[param][url_field].empty?
+      p.delete(param) if p[param].empty?
       p
     end
 

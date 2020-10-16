@@ -97,6 +97,10 @@ Blacklight.onLoad(function () {
 })(jQuery);
 
 Blacklight.onLoad(function () {
+  $('form.advanced button.collapse-toggle').on('click', function(e) {
+    e.preventDefault();
+  });
+
   // Button clicks should change focus. As of 10/3/19, Firefox for Mac and
   // Safari both do not set focus to a button on button click.
   document.querySelectorAll('button.collapse-toggle').forEach(button => {
@@ -493,4 +497,3 @@ Blacklight.handleSearchContextMethod = function (event) {
 Blacklight.onLoad(function () {
   Blacklight.doSearchContextBehavior();
 });
-

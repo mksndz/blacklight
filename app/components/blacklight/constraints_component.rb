@@ -31,7 +31,7 @@ module Blacklight
     end
 
     def facet_constraints
-      @view_context.render(@facet_constraint_component.with_collection(facet_item_presenters))
+      @view_context.render(@facet_constraint_component.with_collection(facet_item_presenters.to_a))
     end
 
     def start_over_path
@@ -47,19 +47,28 @@ module Blacklight
     private
 
     def facet_item_presenters
+      return to_enum(:facet_item_presenters) unless block_given?
+
       @search_state.filter_params.each_pair.flat_map do |facet, values|
         facet_config = @view_context.facet_configuration_for_field(facet)
 
-        Array(values).map do |val|
-          next if val.blank? # skip empty string
-
-          facet_item_presenter(facet_config, val, facet)
+        Array(values).each do |val|
+          yield facet_item_presenter(facet_config, val, facet) if val.present?
         end
+      end
+
+      @search_state.inclusive_filter_params.each_pair.flat_map do |facet, values|
+        facet_config = @view_context.facet_configuration_for_field(facet)
+        yield inclusive_facet_item_presenter(facet_config, values, facet) if values.any?(&:present?)
       end
     end
 
     def facet_item_presenter(facet_config, facet_item, facet_field)
       Blacklight::FacetItemPresenter.new(facet_item, facet_config, @view_context, facet_field)
+    end
+
+    def inclusive_facet_item_presenter(facet_config, facet_item, facet_field)
+      Blacklight::InclusiveFacetItemPresenter.new(facet_item, facet_config, @view_context, facet_field)
     end
   end
 end

@@ -8,7 +8,7 @@ module Blacklight::Solr
         :default_solr_parameters, :add_query_to_solr, :add_facet_fq_to_solr,
         :add_facetting_to_solr, :add_solr_fields_to_query, :add_paging_to_solr,
         :add_sorting_to_solr, :add_group_config_to_solr,
-        :add_facet_paging_to_solr
+        :add_facet_paging_to_solr, :add_adv_search_clauses
       ]
     end
 
@@ -81,6 +81,31 @@ module Blacklight::Solr
       end
     end
 
+    def add_adv_search_clauses(solr_parameters)
+      return if blacklight_params[:clause].blank?
+
+      bool_query = {
+        must: solr_parameters.dig(:json, :query, :bool, :must) || [],
+        must_not: solr_parameters.dig(:json, :query, :bool, :must_not) || [],
+        should: solr_parameters.dig(:json, :query, :bool, :should) || []
+      }
+
+      blacklight_params[:clause].each_value do |clause|
+        opt = clause[:opt]&.to_sym || blacklight_params[:opt]&.to_sym || :must
+        field = (blacklight_config.search_fields || {})[clause[:field]] if clause[:field]
+
+        next unless bool_query.key?(opt) && field&.clause_params && clause[:query].present?
+
+        bool_query[opt] += [field.clause_params.transform_values { |v| v.merge(query: clause[:query]) }]
+      end
+
+      return if bool_query.values.all?(&:blank?)
+
+      solr_parameters[:json] ||= { query: { bool: {} } }
+      solr_parameters[:json][:query] ||= { bool: {} }
+      solr_parameters[:json][:query][:bool] = bool_query
+    end
+
     ##
     # Add any existing facet limits, stored in app-level HTTP query
     # as :f, to solr as appropriate :fq query.
@@ -97,6 +122,18 @@ module Blacklight::Solr
         f_request_params.each_pair do |facet_field, value_list|
           Array(value_list).reject(&:blank?).each do |value|
             solr_parameters.append_filter_query facet_value_to_fq_string(facet_field, value)
+          end
+        end
+      end
+
+      if blacklight_params[:f_inclusive]
+        f_request_params = blacklight_params[:f_inclusive]
+
+        f_request_params.each_pair do |facet_field, value_list|
+          filter_query, nested_queries = facet_inclusive_value_to_fq_string(facet_field, Array(value_list).reject(&:blank?))
+          solr_parameters.append_filter_query filter_query
+          nested_queries.each do |k, v|
+            solr_parameters[k] = v
           end
         end
       end
@@ -267,16 +304,17 @@ module Blacklight::Solr
 
     ##
     # Convert a facet/value pair into a solr fq parameter
-    def facet_value_to_fq_string(facet_field, value)
+    def facet_value_to_fq_string(facet_field, value, use_local_params: true)
       facet_config = blacklight_config.facet_fields[facet_field]
 
       solr_field = facet_config.field if facet_config && !facet_config.query
       solr_field ||= facet_field
 
       local_params = []
-      local_params << "tag=#{facet_config.tag}" if facet_config && facet_config.tag
 
-      prefix = "{!#{local_params.join(' ')}}" unless local_params.empty?
+      if use_local_params
+        local_params << "tag=#{facet_config.tag}" if facet_config && facet_config.tag
+      end
 
       if facet_config && facet_config.query
         if facet_config.query[value]
@@ -286,10 +324,32 @@ module Blacklight::Solr
           '-*:*'
         end
       elsif value.is_a?(Range)
+        prefix = "{!#{local_params.join(' ')}}" unless local_params.empty?
         "#{prefix}#{solr_field}:[#{value.first} TO #{value.last}]"
       else
         "{!term f=#{solr_field}#{(' ' + local_params.join(' ')) unless local_params.empty?}}#{convert_to_term_value(value)}"
       end
+    end
+
+    def facet_inclusive_value_to_fq_string(facet_field, values)
+      return if values.blank?
+
+      return facet_value_to_fq_string(facet_field, values.first) if values.length == 1
+
+      facet_config = blacklight_config.facet_fields[facet_field]
+
+      local_params = []
+      local_params << "tag=#{facet_config.tag}" if facet_config && facet_config.tag
+
+      solr_filters = values.each_with_object({}).with_index do |(v, h), index|
+        h["f_inclusive.#{facet_field}.#{index}"] = facet_value_to_fq_string(facet_field, v, use_local_params: false)
+      end
+
+      filter_query = solr_filters.keys.map do |k|
+        "{!query v=$#{k}}"
+      end.join(' OR ')
+
+      ["{!lucene#{(' ' + local_params.join(' ')) unless local_params.empty?}}#{filter_query}", solr_filters]
     end
 
     def convert_to_term_value(value)

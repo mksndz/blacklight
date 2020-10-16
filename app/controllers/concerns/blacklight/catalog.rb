@@ -56,6 +56,12 @@ module Blacklight::Catalog
     end
   end
 
+  def advanced_search
+    empty_service = search_service_class.new(config: blacklight_config, user_params: {}, **search_service_context)
+
+    (@response, _deprecated_document_list) = empty_service.search_results
+  end
+
   # get a single document from the index
   def raw
     raise(ActionController::RoutingError, 'Not Found') unless blacklight_config.raw_endpoint.enabled
@@ -133,7 +139,7 @@ module Blacklight::Catalog
   # Check if any search parameters have been set
   # @return [Boolean]
   def has_search_parameters?
-    params[:q].present? || params[:f].present? || params[:search_field].present?
+    params[:q].present? || params[:f].present? || params[:search_field].present? || params[:clause].present?
   end
 
   # TODO: deprecate this constant with #facet_limit_for
