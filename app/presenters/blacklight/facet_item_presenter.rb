@@ -2,24 +2,36 @@
 
 module Blacklight
   class FacetItemPresenter
-    attr_reader :facet_item, :facet_config, :view_context, :search_state, :facet_field
+    attr_reader :facet_item, :facet_config, :view_context, :search_state, :facet_field, :param_key
 
-    delegate :hits, :items, to: :facet_item
     delegate :key, to: :facet_config
 
-    def initialize(facet_item, facet_config, view_context, facet_field, search_state = view_context.search_state)
+    def initialize(facet_item, facet_config, view_context, facet_field, search_state = view_context.search_state, param_key: nil)
       @facet_item = facet_item
       @facet_config = facet_config
       @view_context = view_context
       @facet_field = facet_field
       @search_state = search_state
+      @param_key = param_key
+    end
+
+    def hits
+      return unless @facet_item.respond_to? :hits
+
+      @facet_item.hits
+    end
+
+    def items
+      return unless @facet_item.respond_to? :items
+
+      @facet_item.items
     end
 
     ##
     # Check if the query parameters have the given facet field with the
     # given value.
     def selected?
-      search_state.has_facet? facet_config, value: value
+      search_state.has_facet? facet_config, value: value, param: param_key
     end
 
     def field_label
@@ -69,7 +81,7 @@ module Blacklight
 
     # @private
     def remove_href(path = search_state)
-      view_context.search_action_path(path.remove_facet_params(facet_config.key, facet_item))
+      view_context.search_action_path(path.remove_facet_params(facet_config.key, facet_item, param: param_key))
     end
 
     # @private
@@ -77,7 +89,7 @@ module Blacklight
       if facet_config.url_method
         view_context.public_send(facet_config.url_method, facet_config.key, facet_item)
       else
-        view_context.search_action_path(search_state.add_facet_params_and_redirect(facet_config.key, facet_item).merge(path_options))
+        view_context.search_action_path(search_state.add_facet_params_and_redirect(facet_config.key, facet_item, param: param_key).merge(path_options))
       end
     end
 

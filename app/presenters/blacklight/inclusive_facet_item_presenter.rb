@@ -42,7 +42,7 @@ module Blacklight
 
     # @private
     def remove_href(path = search_state)
-      params = values.inject(path) { |p, v| path.reset(p.remove_facet_params(facet_config.key, v, :f_inclusive)) }
+      params = values.inject(path) { |p, v| path.reset(p.remove_facet_params(facet_config.key, v, param: :f_inclusive)) }
       view_context.search_action_path(params)
     end
 

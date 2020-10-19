@@ -127,14 +127,14 @@ module Blacklight
     # Does NOT remove request keys and otherwise ensure that the hash
     # is suitable for a redirect. See
     # add_facet_params_and_redirect
-    def add_facet_params(field, item)
+    def add_facet_params(field, item, param: nil)
       p = reset_search_params
 
-      add_facet_param(p, field, item)
+      add_facet_param(p, field, item, param: param)
 
       if item && item.respond_to?(:fq) && item.fq
         Array(item.fq).each do |f, v|
-          add_facet_param(p, f, v)
+          add_facet_param(p, f, v, param: param)
         end
       end
 
@@ -148,8 +148,8 @@ module Blacklight
     # for a 'fresh' display.
     # Change the action to 'index' to send them back to
     # catalog/index with their new facet choice.
-    def add_facet_params_and_redirect(field, item)
-      new_params = add_facet_params(field, item)
+    def add_facet_params_and_redirect(field, item, param: nil)
+      new_params = add_facet_params(field, item, param: param)
 
       # Delete any request params from facet-specific action, needed
       # to redir to index action properly.
@@ -165,7 +165,9 @@ module Blacklight
     # removes additional params (page, id, etc..)
     # @param [String] field
     # @param [String] item
-    def remove_facet_params(field, item, param = :f)
+    def remove_facet_params(field, item, param: :f)
+      param ||= :f
+
       if item.respond_to? :field
         field = item.field
       end
@@ -196,8 +198,8 @@ module Blacklight
       p
     end
 
-    def has_facet?(config, value: nil)
-      facet = params&.dig(:f, config.key)
+    def has_facet?(config, value: nil, param: :f)
+      facet = params&.dig(param || :f, config.key)
 
       if value
         (facet || []).include? value
@@ -244,7 +246,9 @@ module Blacklight
       end
     end
 
-    def add_facet_param(p, field, item)
+    def add_facet_param(p, field, item, param: :f)
+      param ||= :f
+
       if item.respond_to? :field
         field = item.field
       end
@@ -255,14 +259,14 @@ module Blacklight
 
       value = facet_value_for_facet_item(item)
 
-      p[:f] = (p[:f] || {}).dup # the command above is not deep in rails3, !@#$!@#$
-      p[:f][url_field] = (p[:f][url_field] || []).dup
+      p[param] = (p[param] || {}).dup # the command above is not deep in rails3, !@#$!@#$
+      p[param][url_field] = (p[param][url_field] || []).dup
 
-      if facet_config.single && p[:f][url_field].present?
-        p[:f][url_field] = []
+      if facet_config.single && p[param][url_field].present?
+        p[param][url_field] = []
       end
 
-      p[:f][url_field].push(value)
+      p[param][url_field].push(value)
     end
   end
 end
