@@ -15,19 +15,21 @@ module Blacklight
     end
 
     def query_constraints
-      return if @search_state.query_param.blank?
-
       Deprecation.silence(Blacklight::RenderConstraintsHelperBehavior) do
-        @view_context.render(
-          @query_constraint_component.new(
-            search_state: @search_state,
-            value: @search_state.query_param,
-            label: @view_context.constraint_query_label(@search_state.params),
-            remove_path: @view_context.remove_constraint_url(@search_state),
-            classes: 'query'
+        if @search_state.query_param.present?
+          @view_context.render(
+            @query_constraint_component.new(
+              search_state: @search_state,
+              value: @search_state.query_param,
+              label: @view_context.constraint_query_label(@search_state.params),
+              remove_path: @view_context.remove_constraint_url(@search_state),
+              classes: 'query'
+            )
           )
-        )
-      end
+        else
+          ''.html_safe
+        end
+      end + @view_context.render(@facet_constraint_component.with_collection(clause_presenters.to_a))
     end
 
     def facet_constraints
@@ -60,6 +62,15 @@ module Blacklight
       @search_state.inclusive_filter_params.each_pair.flat_map do |facet, values|
         facet_config = @view_context.facet_configuration_for_field(facet)
         yield inclusive_facet_item_presenter(facet_config, values, facet) if values.any?(&:present?)
+      end
+    end
+
+    def clause_presenters
+      return to_enum(:clause_presenters) unless block_given?
+
+      @search_state.clause_params.each_value do |clause|
+        field_config = @view_context.blacklight_config.search_fields[clause[:field]]
+        yield Blacklight::ClausePresenter.new(clause, field_config, @view_context)
       end
     end
 

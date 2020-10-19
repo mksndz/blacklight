@@ -91,16 +91,17 @@ module Blacklight::Solr
       }
 
       blacklight_params[:clause].each_value do |clause|
-        opt = clause[:opt]&.to_sym || blacklight_params[:opt]&.to_sym || :must
+        op = clause[:op]&.to_sym || blacklight_params[:op]&.to_sym || :must
         field = (blacklight_config.search_fields || {})[clause[:field]] if clause[:field]
 
-        next unless bool_query.key?(opt) && field&.clause_params && clause[:query].present?
+        next unless bool_query.key?(op) && field&.clause_params && clause[:query].present?
 
-        bool_query[opt] += [field.clause_params.transform_values { |v| v.merge(query: clause[:query]) }]
+        bool_query[op] += [field.clause_params.transform_values { |v| v.merge(query: clause[:query]) }]
       end
 
       return if bool_query.values.all?(&:blank?)
 
+      solr_parameters[:mm] = 1 if blacklight_params[:op]&.to_sym == :should
       solr_parameters[:json] ||= { query: { bool: {} } }
       solr_parameters[:json][:query] ||= { bool: {} }
       solr_parameters[:json][:query][:bool] = bool_query
@@ -132,7 +133,7 @@ module Blacklight::Solr
         f_request_params.each_pair do |facet_field, value_list|
           filter_query, nested_queries = facet_inclusive_value_to_fq_string(facet_field, Array(value_list).reject(&:blank?))
           solr_parameters.append_filter_query filter_query
-          nested_queries.each do |k, v|
+          (nested_queries || {}).each do |k, v|
             solr_parameters[k] = v
           end
         end

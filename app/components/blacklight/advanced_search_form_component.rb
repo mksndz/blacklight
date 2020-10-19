@@ -10,15 +10,15 @@ module Blacklight
     end
 
     def default_operator_menu
-      options_with_labels = [:must, :should].index_by { |op| t(op, context: 'blacklight.advanced_search.op') }
+      options_with_labels = [:must, :should].index_by { |op| t(op, scope: 'blacklight.advanced_search.op') }
       select_tag(:op, options_for_select(options_with_labels, params[:op]), class: 'input-small')
     end
 
     def search_field_controls
       @search_field_controls || safe_join(search_fields.values.map.with_index do |field, i|
-        fields_for('clause[]', i, include_id: false, child_index: "blah") do |f|
-          content_tag(:div, class: 'form-group advanced-search-field') do
-            f.label(:query, field.display_label('search'), class: "col-sm-3 control-label") +
+        fields_for('clause[]', i, include_id: false) do |f|
+          content_tag(:div, class: 'form-group advanced-search-field row') do
+            f.label(:query, field.display_label('search'), class: "col-sm-3 col-form-label") +
             content_tag(:div, class: 'col-sm-9') do
               f.hidden_field(:field, value: field.key) +
               f.text_field(:query, value: query_for_search_clause(field.key), class: 'form-control')

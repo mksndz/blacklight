@@ -31,12 +31,16 @@
   </div>
 
   <%= content_tag :h2, t('blacklight.advanced_search.form.sort_label') %>
-  <div class="col-sm-offset-3 col-sm-4">
-    <%= sort_fields_select %>
+  <div class="form-group advanced-search-field row">
+    <div class="col-sm-offset-3 col-sm-4">
+      <%= sort_fields_select %>
+    </div>
   </div>
 
-  <div class="submit-buttons col-sm-offset-3 col-sm-9">
-    <%= submit_tag t('blacklight_advanced_search.form.search_btn'), class: 'btn btn-primary advanced-search-submit', id: "advanced-search-submit" %>
-    <%= button_tag t('blacklight.advanced_search.form.start_over_html'), type: 'reset', class: 'btn btn-link advanced-search-start-over' %>
+  <div class="form-group advanced-search-field row">
+    <div class="submit-buttons col-sm-offset-3 col-sm-9">
+      <%= submit_tag t('blacklight.advanced_search.form.search_btn_html'), class: 'btn btn-primary advanced-search-submit', id: "advanced-search-submit" %>
+      <%= button_tag t('blacklight.advanced_search.form.start_over_html'), type: 'reset', class: 'btn btn-link advanced-search-start-over' %>
+    </div>
   </div>
 <% end %>

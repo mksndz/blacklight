@@ -5,6 +5,7 @@ module Blacklight
     attr_reader :facet_item, :facet_config, :view_context, :search_state, :facet_field
 
     delegate :hits, :items, to: :facet_item
+    delegate :key, to: :facet_config
 
     def initialize(facet_item, facet_config, view_context, facet_field, search_state = view_context.search_state)
       @facet_item = facet_item
