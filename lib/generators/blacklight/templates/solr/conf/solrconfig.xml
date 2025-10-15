@@ -8,6 +8,9 @@
 
   <luceneMatchVersion>6.1.0</luceneMatchVersion>
 
+  <!-- use Solr ClassicSchemaFactory rather than a managed schema -->
+  <schemaFactory class="ClassicIndexSchemaFactory"/>
+
   <directoryFactory name="DirectoryFactory" class="${solr.directoryFactory:solr.StandardDirectoryFactory}"/>
 
   <updateHandler class="solr.DirectUpdateHandler2">
